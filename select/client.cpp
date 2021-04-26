@@ -29,9 +29,13 @@ int main(int argc, char* argv[]){
         write(sockfd, buf, strlen(buf));
         n = read(sockfd, buf, MAXLINE);
         if (n == 0)
+        {
             printf("the other side has been closed.\n");
+        }
         else
-            write(STDOUT_FILENO, buf, n);
+        {
+           write(STDOUT_FILENO, buf, n);
+        }
     }
     close(sockfd);
     return 0;
