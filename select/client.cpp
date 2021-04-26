@@ -9,7 +9,7 @@
 using namespace std;
 
 #define MAXLINE 80
-#define SERV_PORT 6666
+#define SERV_PORT 8888
 
 int main(int argc, char* argv[]){
     struct sockaddr_in servaddr;
