@@ -9,7 +9,13 @@
 
 using namespace std;
 
+extern struct epoll_event* events;
+
 int socket_bind_listen(int port);
+//分发处理函数
+void handle_events(int epoll_fd, int listen_fd, struct epoll_event* events, int events_num, const string &path, threadpool_t* tp);
+
+void acceptConnection(int listen_fd, int epoll_fd, const string &path);
 
 int main(){
 
@@ -36,6 +42,21 @@ int main(){
 
     __uint32_t event = EPOLLIN | EPOLLET;
     requestData *req = new requestData();
+    req->setFd(listen_fd);
+
+    epoll_add(epoll_fd, listen_fd, static_cast<void*>(req), event);
+
+    while (true)
+    {
+        int events_num = epoll_wait(epoll_fd, events, MAXEVENTS, -1);
+        if (0 == events_num){
+            continue;
+        }
+
+        cout << "event_num : " << events_num << endl;
+        handle_events(epoll_fd, listen_fd, events, events_num, PATH, threadpool);   //1
+    }
+    
 }
 
 int socket_bind_listen(int port){
@@ -72,4 +93,39 @@ int socket_bind_listen(int port){
     }
 
     return listen_fd;
+}
+
+void handle_events(int epoll_fd, int listen_fd, struct epoll_event* events, int events_num, const string &path, threadpool_t* tp){
+    for (int i = 0; i < events_num; ++i){
+        //获取有事件产生的描述符
+        requestData* request = (requestData*)(events[i].data.ptr);
+        int fd = request->getFd();
+
+        //有事件发生的描述符为监听描述符
+        if (fd == listen_fd){
+            acceptConnection(listen_fd, epoll_fd, path);    //2
+        }
+    }
+}
+
+void acceptConnection(int listen_fd, int epoll_fd, const string &path){
+    struct sockaddr_in client_addr;
+    memset(&client_addr, 0, sizeof(client_addr));
+
+    socklen_t client_addr_len = 0;
+    int accept_fd = 0;
+    while (0 < (accept_fd = accept(listen_fd, (struct sockaddr*)&client_addr, &client_addr_len)))
+    {
+        int ret = setSocketNonBlocking(accept_fd);
+        if (0 > ret){
+            perror("Set non block failed!");
+            return;
+        }
+
+        requestData* req_info = new requestData(epoll_fd, accept_fd, path);
+
+        //文件描述符可以读，边缘触发（Edge Triggered）模式，保证一个 socket 连接在任意一个时刻只被一个线程处理
+        
+    }
+    
 }

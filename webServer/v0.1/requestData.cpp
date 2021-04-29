@@ -17,6 +17,28 @@ requestData::requestData()
     cout << "requestData constructed!" << endl;
 }
 
+requestData::requestData(int _epollfd, int _fd, std::string _path)
+            : now_read_pos(0)
+            , state(STATE_PARSE_URI)
+            , h_state(h_start)
+            , keep_alive(false)
+            , again_times(0)
+            , timer(nullptr)
+            , path(_path)
+            , fd(_fd)
+            , epollfd(_epollfd)
+{
+    
+}
+
 requestData::~requestData()
 {
+}
+
+void requestData::setFd(int _fd){
+    fd = _fd;
+}
+
+int requestData::getFd(){
+    return fd;
 }

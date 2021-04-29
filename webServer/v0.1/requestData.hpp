@@ -23,9 +23,17 @@ private:
     bool keep_alive;
     int again_times;
     mytimer* timer; 
+
+    int fd;
+    std::string path;
+    int epollfd;
 public:
     requestData(/* args */);
+    requestData(int _epollfd, int _fd, std::string _path);
     ~requestData();
+
+    void setFd(int _fd);
+    int getFd();
 };
 
 

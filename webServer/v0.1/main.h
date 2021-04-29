@@ -11,4 +11,6 @@ const int QUEUE_SIZE = 65535;
 
 const int PORT = 8888;
 
+const string PATH = "/";
+
 #endif
