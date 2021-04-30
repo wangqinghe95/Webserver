@@ -10,12 +10,17 @@
 using namespace std;
 
 extern struct epoll_event* events;
+extern pthread_mutex_t qlock;
+extern priority_queue<mytimer*, deque<mytimer*>, timerCmp> MyTimerQueue;
+
 
 int socket_bind_listen(int port);
 //分发处理函数
 void handle_events(int epoll_fd, int listen_fd, struct epoll_event* events, int events_num, const string &path, threadpool_t* tp);
 
 void acceptConnection(int listen_fd, int epoll_fd, const string &path);
+
+void myHandler(void *args);
 
 int main(){
 
@@ -54,7 +59,7 @@ int main(){
         }
 
         cout << "event_num : " << events_num << endl;
-        handle_events(epoll_fd, listen_fd, events, events_num, PATH, threadpool);   //1
+        handle_events(epoll_fd, listen_fd, events, events_num, PATH, threadpool);
     }
     
 }
@@ -103,8 +108,20 @@ void handle_events(int epoll_fd, int listen_fd, struct epoll_event* events, int 
 
         //有事件发生的描述符为监听描述符
         if (fd == listen_fd){
-            acceptConnection(listen_fd, epoll_fd, path);    //2
+            acceptConnection(listen_fd, epoll_fd, path);
         }
+        else{
+            if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)
+                    || (!events[i].events & EPOLLIN)){
+                cout << "error event" << endl;
+                delete request;
+                continue;
+            }
+
+            request->seperateTimer();
+            int rc = threadpool_add(tp, myHandler, events[i].data.ptr, 0);
+        }
+        
     }
 }
 
@@ -125,7 +142,21 @@ void acceptConnection(int listen_fd, int epoll_fd, const string &path){
         requestData* req_info = new requestData(epoll_fd, accept_fd, path);
 
         //文件描述符可以读，边缘触发（Edge Triggered）模式，保证一个 socket 连接在任意一个时刻只被一个线程处理
-        
+        __uint32_t _epo_event = EPOLLIN | EPOLLET | EPOLLONESHOT;
+        epoll_add(epoll_fd, accept_fd, static_cast<void*>(req_info), _epo_event);
+
+        //新增时间信息
+        mytimer *mtimer = new mytimer(req_info, TIMER_TIME_OUT);
+        req_info->addTimer(mtimer);
+
+        pthread_mutex_lock(&qlock);
+        MyTimerQueue.push(mtimer);
+        pthread_mutex_unlock(&qlock);
     }
     
+}
+
+void myHandler(void *args){
+    requestData *req_data = (requestData *)args;
+    req_data->              //1
 }

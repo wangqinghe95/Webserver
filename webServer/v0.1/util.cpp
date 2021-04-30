@@ -3,6 +3,8 @@
 #include<signal.h>
 #include<cstring>
 #include<fcntl.h>
+#include<unistd.h>
+#include<errno.h>
 
 void handle_for_sigpipe(){
     struct sigaction sa;
@@ -26,4 +28,35 @@ int setSocketNonBlocking(int fd){
     }
     
     return 0;
+}
+
+ssize_t readn(int fd, void *buff, size_t n){
+    size_t nleft = n;
+    ssize_t nread = 0;
+    ssize_t readSum = 0;
+
+    char *ptr = (char*)buff;
+    while (nleft > 0)
+    {
+        if (0 > (nread = read(fd, ptr, nleft))){
+            if (errno = EINTR){     //read 等待输入期间，如果收到了一个信号，系统将转去处理该信号后失败类型
+                nread = 0;  
+            }
+            else if (errno == EAGAIN){ //在非阻塞的情况下，连续做read而没有数据可读时，系统返回的错误
+                return readSum;
+            }
+            else{
+                return -1;
+            }            
+        }
+        else if (0 == nread){
+            break;
+        }
+
+        readSum += nread;
+        nleft -= nread;
+        ptr += nread;
+    }
+
+    return readSum;    
 }

@@ -8,6 +8,7 @@
 const int THREADPOOL_GRACEFUL = 1;
 const int THREADPOOL_INVALID = -1;
 const int THREADPOOL_LOCK_FAILURE = -2;
+const int THREADPOOL_QUEUE_FULL = -3;
 const int THREADPOOL_SHUTDOWN = -4;
 const int THREADPOOL_THREAD_FAILURE = -5;
 
@@ -41,6 +42,8 @@ struct threadpool_t{
 };
 
 threadpool_t *threadpool_create(int thread_count, int queue_size, int flags);
+
+int threadpool_add(threadpool_t *pool, void (*function)(void*), void* argument, int flags);
 
 int threadpool_destory(threadpool_t* pool, int flags);
 

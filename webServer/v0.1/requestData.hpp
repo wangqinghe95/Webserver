@@ -1,7 +1,12 @@
 #ifndef REQUESTDATA_HPP__
 #define REQUESTDATA_HPP__
 
+#include<unordered_map>
+#include<queue> //priority_queue
+
 const int STATE_PARSE_URI = 1;
+
+const int MAX_BUFF = 4096;
 
 enum HeadersState{
     h_start = 0,
@@ -9,9 +14,20 @@ enum HeadersState{
     
 };
 
+struct mytimer;
+struct requestData;
+
 struct mytimer{
     mytimer(requestData *_request_data, int timeout);
     ~mytimer();
+
+    requestData* request_data;
+    size_t expired_time;
+    bool deleted;
+
+    size_t getExpTime() const;
+    void clearReq();
+    void setDeleted();
 };
 
 class requestData
@@ -34,8 +50,13 @@ public:
 
     void setFd(int _fd);
     int getFd();
+    void addTimer(mytimer *mtimer);
+    void seperateTimer();
+    void handleRequest();
 };
 
-
+struct timerCmp{
+    bool operator()(const mytimer *a, const mytimer *b)const;
+};
 
 #endif

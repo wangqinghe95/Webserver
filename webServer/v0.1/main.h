@@ -12,5 +12,6 @@ const int QUEUE_SIZE = 65535;
 const int PORT = 8888;
 
 const string PATH = "/";
+const int TIMER_TIME_OUT = 500;
 
 #endif

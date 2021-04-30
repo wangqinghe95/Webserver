@@ -53,6 +53,43 @@ threadpool_t *threadpool_create(int thread_count, int queue_size, int flags){
     return NULL;    
 }
 
+int threadpool_add(threadpool_t *pool, void (*function)(void*), void* argument, int flags){
+    int err = 0;
+    
+    if (NULL == pool || NULL == function){
+        return THREADPOOL_INVALID;
+    }
+
+    if (pthread_mutex_lock(&(pool->lock)) != 0){
+        return THREADPOOL_LOCK_FAILURE;
+    }
+
+    int next = (pool->tail + 1) % pool->queue_size;
+    do
+    {
+        if (pool->count == pool->queue_size){
+            err = THREADPOOL_QUEUE_FULL;
+            break;
+        }
+
+        if(pool->shutdown){
+            err = THREADPOOL_SHUTDOWN;
+            break;
+        }
+
+        if (pthread_cond_signal(&(pool->notify)) != 0){
+            err = THREADPOOL_LOCK_FAILURE;
+            break;
+        }
+    } while (false);
+
+    if (pthread_mutex_unlock(&pool->lock) != 0){
+        err = THREADPOOL_LOCK_FAILURE;
+    }
+
+    return err;    
+}
+
 int threadpool_destory(threadpool_t* pool, int flags){
     printf("Thread pool destoty !\n");
 
