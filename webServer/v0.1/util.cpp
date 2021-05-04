@@ -1,4 +1,4 @@
-#include"util.h"
+#include"util.hpp"
 
 #include<signal.h>
 #include<cstring>
@@ -28,6 +28,33 @@ int setSocketNonBlocking(int fd){
     }
     
     return 0;
+}
+
+ssize_t writen(int fd, void* buff, size_t n)
+{
+    size_t nleft = n;
+    ssize_t nwritten = 0;
+    ssize_t writeSum = 0;
+    char *ptr = (char*)buff;
+    while (nleft > 0)
+    {
+        if ((nwritten = write(fd, ptr, nleft)) <= 0){
+            if (nwritten < 0){
+                if (errno == EINTR || errno == EAGAIN){
+                    nwritten = 0;
+                    continue;
+                }
+                else{
+                    return -1;
+                }
+            }
+        }
+        writeSum += nwritten;
+        nleft -= nwritten;
+        ptr += nwritten;
+    }
+
+    return writeSum;
 }
 
 ssize_t readn(int fd, void *buff, size_t n){

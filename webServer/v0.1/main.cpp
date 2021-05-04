@@ -1,17 +1,17 @@
 #include<cstdio>
 #include<iostream>
 
-#include"util.h"
-#include"epoll.h"
-#include"threadpool.h"
-#include"main.h"
+#include"util.hpp"
+#include"epoll.hpp"
+#include"threadpool.hpp"
+#include"main.hpp"
 #include"requestData.hpp"
 
 using namespace std;
 
 extern struct epoll_event* events;
 extern pthread_mutex_t qlock;
-extern priority_queue<mytimer*, deque<mytimer*>, timerCmp> MyTimerQueue;
+extern priority_queue<mytimer*, deque<mytimer*>, timerCmp> myTimerQueue;
 
 
 int socket_bind_listen(int port);
@@ -21,6 +21,8 @@ void handle_events(int epoll_fd, int listen_fd, struct epoll_event* events, int 
 void acceptConnection(int listen_fd, int epoll_fd, const string &path);
 
 void myHandler(void *args);
+
+void handle_expired_event();
 
 int main(){
 
@@ -62,6 +64,7 @@ int main(){
         handle_events(epoll_fd, listen_fd, events, events_num, PATH, threadpool);
     }
     
+    handle_expired_event();
 }
 
 int socket_bind_listen(int port){
@@ -150,13 +153,35 @@ void acceptConnection(int listen_fd, int epoll_fd, const string &path){
         req_info->addTimer(mtimer);
 
         pthread_mutex_lock(&qlock);
-        MyTimerQueue.push(mtimer);
+        myTimerQueue.push(mtimer);
         pthread_mutex_unlock(&qlock);
     }
     
 }
 
-void myHandler(void *args){
+void myHandler(void *args)
+{
     requestData *req_data = (requestData *)args;
-    req_data->              //1
+    req_data->handleRequest();
+}
+
+void handle_expired_event()
+{
+    pthread_mutex_lock(&qlock);
+    while (!myTimerQueue.empty())
+    {
+        mytimer *ptimer_now = myTimerQueue.top();
+        if (ptimer_now->isDeleted()){
+            myTimerQueue.top();
+            delete ptimer_now;
+        }
+        else if(ptimer_now->isValid() == false){
+            myTimerQueue.pop();
+            delete ptimer_now;
+        }
+        else{
+            break;
+        }
+    }
+    pthread_mutex_unlock(&qlock);    
 }
