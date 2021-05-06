@@ -136,11 +136,15 @@ void requestData::reset()
 }
 
 void requestData::handleRequest(){
+    
     char buff[MAX_BUFF] = {0};
     bool isError = false;
     while (true)
     {
-        int read_num = readn(fd, buff, MAX_BUFF);   
+        printf("handleRequest\n");
+        int read_num = readn(fd, buff, MAX_BUFF);
+        cout << "read_num = " << read_num << endl;
+        cout << "buff = " << buff << endl; 
         if (0 > read_num){
             perror("read error");
             isError = true;
@@ -262,6 +266,7 @@ void requestData::handleRequest(){
 
 int requestData::analysisRequest()
 {
+    printf("analysisRequest\n");
     if (method == METHOD_POST){
         char header[MAX_BUFF] = {0};
         sprintf(header, "HTTP/1.1 %d %s\r\n", 200, "OK");
@@ -553,6 +558,14 @@ mytimer::mytimer(requestData *_request_data, int timeout)
     struct timeval now;
     gettimeofday(&now, NULL);
     expired_time = ((now.tv_sec * 1000) + (now.tv_usec / 1000)) + timeout;
+}
+
+mytimer::~mytimer()
+{
+    if (request_data != NULL){
+        delete request_data;
+        request_data = NULL;
+    }
 }
 
 size_t mytimer::getExpTime() const

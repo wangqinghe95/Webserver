@@ -1,6 +1,7 @@
 #include"threadpool.hpp"
 
 threadpool_t *threadpool_create(int thread_count, int queue_size, int flags){
+    // printf("threadpool_create\n");
     threadpool_t *pool;
 
     do
@@ -54,6 +55,7 @@ threadpool_t *threadpool_create(int thread_count, int queue_size, int flags){
 }
 
 int threadpool_add(threadpool_t *pool, void (*function)(void*), void* argument, int flags){
+    // printf("threadpool_add\n");
     int err = 0;
     
     if (NULL == pool || NULL == function){
@@ -77,6 +79,11 @@ int threadpool_add(threadpool_t *pool, void (*function)(void*), void* argument, 
             break;
         }
 
+        pool->queue[pool->tail].function = function;
+        pool->queue[pool->tail].argument = argument;
+        pool->tail = next;
+        pool->count += 1;
+
         if (pthread_cond_signal(&(pool->notify)) != 0){
             err = THREADPOOL_LOCK_FAILURE;
             break;
@@ -86,7 +93,7 @@ int threadpool_add(threadpool_t *pool, void (*function)(void*), void* argument, 
     if (pthread_mutex_unlock(&pool->lock) != 0){
         err = THREADPOOL_LOCK_FAILURE;
     }
-
+    // printf("next = %d, err = %d\n", next, err);
     return err;    
 }
 
@@ -130,6 +137,8 @@ int threadpool_destory(threadpool_t* pool, int flags){
 }
 
 int threadpool_free(threadpool_t *pool){
+    printf("threadpool_free\n");
+
     if (pool == NULL || pool->started > 0){
         return -1;
     }
@@ -137,19 +146,21 @@ int threadpool_free(threadpool_t *pool){
     if (pool->threads){
         free(pool->threads);
         free(pool->queue);
-    }
 
-    //因为我们在初始化互斥锁和条件变量后再分配线程池中线程指针的
-    //所以我们确定他们是被初始化的，所以再销毁之前要先锁住
-    pthread_mutex_lock(&(pool->lock));
-    pthread_mutex_destroy(&(pool->lock));
-    pthread_cond_destroy(&(pool->notify));
+        //因为我们在初始化互斥锁和条件变量后再分配线程池中线程指针的
+        //所以我们确定他们是被初始化的，所以再销毁之前要先锁住
+        pthread_mutex_lock(&(pool->lock));
+        pthread_mutex_destroy(&(pool->lock));
+        pthread_cond_destroy(&(pool->notify));
+    }
 
     free(pool);
     return 0;
 }
 
 static void* threadpool_thread(void *threadpool){
+    printf("threadpool_thread\n");
+
     threadpool_t *pool = (threadpool_t*)threadpool;
     threadpool_task_t task;
 

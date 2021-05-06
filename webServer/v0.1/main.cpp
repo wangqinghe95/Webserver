@@ -62,9 +62,9 @@ int main(){
 
         cout << "event_num : " << events_num << endl;
         handle_events(epoll_fd, listen_fd, events, events_num, PATH, threadpool);
-    }
     
-    handle_expired_event();
+        handle_expired_event();
+    }
 }
 
 int socket_bind_listen(int port){
@@ -105,12 +105,14 @@ int socket_bind_listen(int port){
 
 void handle_events(int epoll_fd, int listen_fd, struct epoll_event* events, int events_num, const string &path, threadpool_t* tp){
     for (int i = 0; i < events_num; ++i){
+        cout << "handle_events: i = " << i << endl; 
         //获取有事件产生的描述符
         requestData* request = (requestData*)(events[i].data.ptr);
         int fd = request->getFd();
-
+        cout << "fd = " << fd << "listen_fd" << listen_fd << endl;
         //有事件发生的描述符为监听描述符
         if (fd == listen_fd){
+            cout << "acceptConnection" << endl;
             acceptConnection(listen_fd, epoll_fd, path);
         }
         else{
@@ -123,6 +125,7 @@ void handle_events(int epoll_fd, int listen_fd, struct epoll_event* events, int 
 
             request->seperateTimer();
             int rc = threadpool_add(tp, myHandler, events[i].data.ptr, 0);
+            printf("rc = %d\n", rc);
         }
         
     }
@@ -172,7 +175,7 @@ void handle_expired_event()
     {
         mytimer *ptimer_now = myTimerQueue.top();
         if (ptimer_now->isDeleted()){
-            myTimerQueue.top();
+            myTimerQueue.pop();
             delete ptimer_now;
         }
         else if(ptimer_now->isValid() == false){

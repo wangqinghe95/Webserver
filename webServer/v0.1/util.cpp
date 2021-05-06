@@ -61,7 +61,6 @@ ssize_t readn(int fd, void *buff, size_t n){
     size_t nleft = n;
     ssize_t nread = 0;
     ssize_t readSum = 0;
-
     char *ptr = (char*)buff;
     while (nleft > 0)
     {
