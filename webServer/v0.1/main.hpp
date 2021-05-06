@@ -5,6 +5,8 @@
 #include<netinet/in.h>  //struct sockaddr_in
 #include<cstring> //bero
 #include<sys/epoll.h>
+#include<string>
+using namespace std;
 
 const int THREADPOOL_THREAD_NUM = 4;
 const int QUEUE_SIZE = 65535;

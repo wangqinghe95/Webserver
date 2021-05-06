@@ -28,7 +28,7 @@ int epoll_add(int epoll_fd, int fd, void *request, __uint32_t events)
     return 0;
 }
 
-int epoll_wait(int epoll_fd, struct epoll_event* events, int max_events, int timeout)
+int my_epoll_wait(int epoll_fd, struct epoll_event* events, int max_events, int timeout)
 {
     int ret_count = epoll_wait(epoll_fd, events, max_events, timeout);
     if (0 > timeout){

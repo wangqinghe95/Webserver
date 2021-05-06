@@ -7,6 +7,10 @@
 #include<cstring>
 #include<sys/time.h>
 #include<sys/epoll.h>
+#include<sys/stat.h>
+#include<sys/fcntl.h>
+#include<sys/mman.h>
+#include<unistd.h>
 
 // #include<opencv/cv.h>
 
@@ -14,6 +18,39 @@ using namespace std;
 
 pthread_mutex_t qlock = PTHREAD_MUTEX_INITIALIZER;  //等同于 pthread_mutex_init
 priority_queue<mytimer*, deque<mytimer*>, timerCmp> myTimerQueue;
+
+pthread_mutex_t MimeType::lock = PTHREAD_MUTEX_INITIALIZER;
+std::unordered_map<std::string, std::string> MimeType::mime;
+
+std::string MimeType::getMime(const std::string &suffix)
+{
+    if (mime.size() == 0){
+        pthread_mutex_lock(&lock);
+        if (mime.size() == 0){
+            mime[".html"] = "text/html";
+            mime[".avi"] = "video/x-msvideo";
+            mime[".bmp"] = "image/bmp";
+            mime[".c"] = "text/plain";
+            mime[".doc"] = "application/msword";
+            mime[".gif"] = "image/gif";
+            mime[".gz"] = "application/x-gzip";
+            mime[".htm"] = "text/html";
+            mime[".ico"] = "application/x-ico";
+            mime[".jpg"] = "image/jpeg";
+            mime[".png"] = "image/png";
+            mime[".txt"] = "text/plain";
+            mime[".mp3"] = "audio/mp3";
+            mime[".default"] = "text/html";
+        }
+        pthread_mutex_unlock(&lock);
+    }
+    if (mime.find(suffix) == mime.end()){
+        return mime["default"];
+    }
+    else{
+        return mime[suffix];
+    }
+}
 
 requestData::requestData()
         :now_read_pos(0)
@@ -63,6 +100,26 @@ void requestData::seperateTimer(){
         timer->clearReq();
         timer = NULL;
     }
+}
+
+void requestData::handleError(int fd, int err_num, std::string short_msg){
+    short_msg = " " + short_msg;
+    char send_buff[MAX_BUFF] = {0};
+    string body_buff, header_buff;
+    body_buff += "<html><title>TKeed Error</title>";
+    body_buff += "<body backcolor=\"ffffff\">";
+    body_buff += to_string(err_num) + short_msg;
+    body_buff += "<hr><em> LinYa's Web Server</em>\n</body></html>";
+
+    header_buff += "HTTP/1.1 " + to_string(err_num) + short_msg + "\r\n";
+    header_buff += "Content-type: text/html\r\n";
+    header_buff += "Connection: close\r\n";
+    header_buff += "Content-length: " + to_string(body_buff.size()) + "\r\n";
+    header_buff += "\r\n";
+    sprintf(send_buff, "%s", header_buff.c_str());
+    writen(fd, send_buff, strlen(send_buff));
+    sprintf(send_buff, "%s", body_buff.c_str());
+    writen(fd, send_buff, strlen(send_buff));
 }
 
 void requestData::reset()
@@ -225,10 +282,62 @@ int requestData::analysisRequest()
             return ANALYSIS_ERROR;
         }
 
+        cout << "content size = " << content.size() << endl;
         vector<char> data(content.begin(), content.end());
         // Mat test = imdecode(data,)
         return ANALYSIS_SUCCESS;
     }
+    else if (method == METHOD_GET) {
+        char header[MAX_BUFF] = {0};
+        sprintf(header, "HTTP/1.1 %d %s\r\n", 200, "OK");
+        if (headers.find("Connection") != headers.end()
+            && headers["Connection"] == "keep-alive"){
+            keep_alive = true;
+            sprintf(header, "%sConnection: keep-alive\r\n", header);
+            sprintf(header, "%sKeep-Alive: timeout=%d\r\n", header, EPOLL_WAIT_TIME);            
+        }
+
+        int dot_pos = file_name.find('.');
+        const char *file_type;
+        if (dot_pos < 0){
+            file_type = MimeType::getMime("default").c_str();
+        }
+        else{
+            file_type = MimeType::getMime(file_name.substr(dot_pos)).c_str();
+        }
+
+        struct stat sbuf;
+        if (stat(file_name.c_str(), &sbuf) < 0){
+            handleError(fd, 404, "Not Found!");
+            return ANALYSIS_ERROR;
+        }
+
+        sprintf(header, "%sContent-type: %s\r\n", header, file_type);
+        sprintf(header, "%sContent-length: %ld\r\n", header, sbuf.st_size);
+        sprintf(header, "%s\r\n", header);
+        size_t send_len = (size_t)writen(fd, header, strlen(header));
+        if (send_len != strlen(header)){
+            perror("Send header failed");
+            return ANALYSIS_ERROR;
+        }
+
+        int src_fd = open(file_name.c_str(), O_RDONLY, 0);
+        char *src_addr = static_cast<char*>(mmap(NULL, sbuf.st_size, PROT_READ, MAP_PRIVATE, src_fd, 0));
+        close(src_fd);
+
+        send_len = writen(fd, src_addr, sbuf.st_size);
+        if (send_len != sbuf.st_size){
+            perror("Send file failed");
+            return ANALYSIS_ERROR;
+        }
+        
+        munmap(src_addr, sbuf.st_size);
+        return ANALYSIS_SUCCESS;
+    }
+    else
+    {
+        return ANALYSIS_ERROR;
+    }    
 }
 
 int requestData::parse_headers()
@@ -406,7 +515,7 @@ int requestData::parse_URI()
                 }
             }
             else{
-                file_name = "index_html";
+                file_name = "index.html";
             }
         }
         pos = _pos;

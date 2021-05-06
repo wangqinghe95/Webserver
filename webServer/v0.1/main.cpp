@@ -55,7 +55,7 @@ int main(){
 
     while (true)
     {
-        int events_num = epoll_wait(epoll_fd, events, MAXEVENTS, -1);
+        int events_num = my_epoll_wait(epoll_fd, events, MAXEVENTS, -1);
         if (0 == events_num){
             continue;
         }

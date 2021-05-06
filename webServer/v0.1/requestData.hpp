@@ -34,6 +34,16 @@ const int HTTP_11 = 2;
 
 const int EPOLL_WAIT_TIME = 500;
 
+class MimeType
+{
+    static pthread_mutex_t lock;
+    static std::unordered_map<std::string, std::string> mime;
+    MimeType();
+    MimeType(const MimeType &m);
+public:
+    static std::string getMime(const std::string &suffix);
+};
+
 enum HeadersState{
     h_start = 0,
     h_key,
@@ -93,6 +103,7 @@ public:
     void seperateTimer();
     void handleRequest();
     void reset();
+    void handleError(int fd, int err_num, std::string short_msg);
 
 private:
     int parse_URI();
