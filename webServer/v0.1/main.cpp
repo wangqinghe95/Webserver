@@ -60,7 +60,7 @@ int main(){
             continue;
         }
 
-        cout << "event_num : " << events_num << endl;
+        // cout << "event_num : " << events_num << endl;
         handle_events(epoll_fd, listen_fd, events, events_num, PATH, threadpool);
     
         handle_expired_event();
@@ -105,14 +105,14 @@ int socket_bind_listen(int port){
 
 void handle_events(int epoll_fd, int listen_fd, struct epoll_event* events, int events_num, const string &path, threadpool_t* tp){
     for (int i = 0; i < events_num; ++i){
-        cout << "handle_events: i = " << i << endl; 
+        // cout << "handle_events: i = " << i << endl; 
         //获取有事件产生的描述符
         requestData* request = (requestData*)(events[i].data.ptr);
         int fd = request->getFd();
-        cout << "fd = " << fd << "listen_fd" << listen_fd << endl;
+        // cout << "fd = " << fd << "listen_fd" << listen_fd << endl;
         //有事件发生的描述符为监听描述符
         if (fd == listen_fd){
-            cout << "acceptConnection" << endl;
+            // cout << "acceptConnection" << endl;
             acceptConnection(listen_fd, epoll_fd, path);
         }
         else{
@@ -125,7 +125,7 @@ void handle_events(int epoll_fd, int listen_fd, struct epoll_event* events, int 
 
             request->seperateTimer();
             int rc = threadpool_add(tp, myHandler, events[i].data.ptr, 0);
-            printf("rc = %d\n", rc);
+            // printf("rc = %d\n", rc);
         }
         
     }
@@ -149,6 +149,7 @@ void acceptConnection(int listen_fd, int epoll_fd, const string &path){
 
         //文件描述符可以读，边缘触发（Edge Triggered）模式，保证一个 socket 连接在任意一个时刻只被一个线程处理
         __uint32_t _epo_event = EPOLLIN | EPOLLET | EPOLLONESHOT;
+        // cout << "add fd " << accept_fd << endl;
         epoll_add(epoll_fd, accept_fd, static_cast<void*>(req_info), _epo_event);
 
         //新增时间信息

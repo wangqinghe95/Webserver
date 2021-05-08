@@ -136,15 +136,14 @@ void requestData::reset()
 }
 
 void requestData::handleRequest(){
-    
     char buff[MAX_BUFF] = {0};
     bool isError = false;
     while (true)
     {
-        printf("handleRequest\n");
+        // cout << "read fd =  " << fd << endl;
         int read_num = readn(fd, buff, MAX_BUFF);
         cout << "read_num = " << read_num << endl;
-        cout << "buff = " << buff << endl; 
+        // cout << "buff = " << buff << endl; 
         if (0 > read_num){
             perror("read error");
             isError = true;
@@ -169,6 +168,7 @@ void requestData::handleRequest(){
         }
         string now_read(buff, buff+read_num);
         content += now_read;
+        cout << "state " << state << endl;
         if (state == STATE_PARSE_URI){
             int flag = parse_URI();
             if (flag == PARSE_URI_AGAIN){
@@ -373,7 +373,7 @@ int requestData::parse_headers()
         {
             if (str[i] == ':'){
                 key_end = i;
-                if (key_start - key_end <= 0){
+                if (key_end - key_start <= 0){
                     return PARSE_HEADER_ERROR;
                 }
                 h_state = h_colon;
@@ -408,7 +408,7 @@ int requestData::parse_headers()
                     return PARSE_HEADER_ERROR;
                 }
             }
-            else if (i - value_start > 25){
+            else if (i - value_start > 255){
                 return PARSE_HEADER_ERROR;
             }
             break;
@@ -549,6 +549,7 @@ int requestData::parse_URI()
         }
     }
 
+    cout << "request_line" << request_line; 
     state = STATE_PARSE_HEADERS;
     return PARSE_URI_SUCCESS;
 }

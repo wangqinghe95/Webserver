@@ -5,7 +5,7 @@
 #include<fcntl.h>
 #include<unistd.h>
 #include<errno.h>
-
+#include<cstdio>
 void handle_for_sigpipe(){
     struct sigaction sa;
     memset(&sa, '\0', sizeof(sa));
@@ -58,6 +58,7 @@ ssize_t writen(int fd, void* buff, size_t n)
 }
 
 ssize_t readn(int fd, void *buff, size_t n){
+    // printf("readn\n");
     size_t nleft = n;
     ssize_t nread = 0;
     ssize_t readSum = 0;
@@ -65,7 +66,7 @@ ssize_t readn(int fd, void *buff, size_t n){
     while (nleft > 0)
     {
         if (0 > (nread = read(fd, ptr, nleft))){
-            if (errno = EINTR){     //read 等待输入期间，如果收到了一个信号，系统将转去处理该信号后失败类型
+            if (errno == EINTR){     //read 等待输入期间，如果收到了一个信号，系统将转去处理该信号后失败类型
                 nread = 0;  
             }
             else if (errno == EAGAIN){ //在非阻塞的情况下，连续做read而没有数据可读时，系统返回的错误
